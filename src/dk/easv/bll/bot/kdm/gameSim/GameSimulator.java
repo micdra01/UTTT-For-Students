@@ -5,8 +5,8 @@ import dk.easv.bll.bot.kdm.gameSim.Move;
 import  dk.easv.bll.bot.kdm.gameSim.GameSimulator;
 import dk.easv.bll.field.IField;
 import dk.easv.bll.game.IGameState;
-import dk.easv.bll.bot.kdm.gameSim.Move;
 import dk.easv.bll.move.IMove;
+import dk.easv.bll.move.Move;
 
 public class GameSimulator {
     private final IGameState currentState;
