@@ -18,19 +18,8 @@ public class BOTen_Anna implements IBot {
     public IMove doMove(IGameState state) {
         MonteCarloTreeSearch mcts = new MonteCarloTreeSearch();
         MonteState monteState = new MonteState(state);
-        Node naisuNode = mcts.findNextMove(monteState, monteState.getMoveNumber());
-        IMove move = null;
-        for (int i = 0; i < naisuNode.getState().getField().getBoard().length; i++) {
-            for (int j = 0; j < naisuNode.getState().getField().getBoard()[i].length; j++) {
-                String naisuMove = naisuNode.getState().getField().getBoard()[i][j];
-                String parentMove = naisuNode.getParent().getState().getField().getBoard()[i][j];
-
-                if (!parentMove.equals(naisuMove)) {
-                    move = new Move(i, j);
-                }
-            }
-        }
-
+        IMove move = mcts.findNextMove(monteState);
+        return move;
         /*long time = System.currentTimeMillis();
         Random rand = new Random();
         int count = 0;
@@ -79,7 +68,6 @@ public class BOTen_Anna implements IBot {
         IMove randomMovePlayer = moves.get(rand.nextInt(moves.size()));
         return randomMovePlayer; // just play randomly if solution not found
          */
-        return move;
     }
 
     @Override
@@ -88,9 +76,9 @@ public class BOTen_Anna implements IBot {
     }
 
     public class MonteState extends GameState { // Board and playerNo are not needed, as they are implemented in GameState.
-        int visitCount; // Total number of games finished from this Node.
-        double winScore; // Total number of games won, from this Node.
-        IMove lastMove;
+        private int visitCount; // Total number of games finished from this Node.
+        private double winScore; // Total number of games won, from this Node.
+        private IMove lastMove;
 
         public MonteState(IGameState state) {
             super(state);
@@ -98,37 +86,32 @@ public class BOTen_Anna implements IBot {
             winScore = 0;
         }
 
-        public MonteState(IGameState state, IMove lastMove) {
-            super(state);
+        public MonteState() {
+            super();
             visitCount = 0;
             winScore = 0;
-            this.lastMove = lastMove;
         }
 
-        // TODO look into why this doesn't return anything.
         public List<MonteState> getAllPossibleStates() {
             List<MonteState> possibleStates = new ArrayList<>();
             List<IMove> availableMoves = getField().getAvailableMoves();
-            GameSimulator gameSimulator;
 
             for (IMove move : availableMoves) {
-                gameSimulator = new GameSimulator(new MonteState(this));
-                gameSimulator.updateBoard(move);
-                possibleStates.add(new MonteState(gameSimulator.getCurrentState(), move));
+                MonteState newState = new MonteState();
+                newState.setLastMove(move);
+                newState.getField().getBoard()[move.getX()][move.getY()] = getMoveNumber() + "";
+                possibleStates.add(newState);
             }
 
             return possibleStates;
         }
 
-        public void randomMove() {
+        public IMove randomMove() {
             Random random = new Random();
             List<MonteState> possibleStates = getAllPossibleStates();
-            System.out.println(possibleStates.size());
             int randomIndex = random.nextInt(possibleStates.size());
 
-
-            getField().setBoard(possibleStates.get(randomIndex).getField().getBoard());
-            setLastMove(possibleStates.get(randomIndex).getLastMove());
+            return possibleStates.get(randomIndex).getLastMove();
         }
 
         public void setLastMove(IMove lastMove) {
@@ -189,15 +172,32 @@ public class BOTen_Anna implements IBot {
         }
 
         public Node getChildWithMaxScore() {
-            Node bestNode = this;
+            List<Node> bestNodes = new ArrayList<>();
 
             for (Node child : children) {
-                if (bestNode.getState().getWinScore() < child.getState().getWinScore()) {
-                    bestNode = child;
+                if (bestNodes.isEmpty()) {
+                    bestNodes.add(child);
+                } else {
+                    double bestNodeScore = bestNodes.get(0).getState().getWinScore() / bestNodes.get(0).getState().getVisitCount();
+                    double childScore = child.getState().getWinScore() / child.getState().getVisitCount();
+
+                    if (bestNodeScore < childScore) {
+                        bestNodes.clear();
+                        bestNodes.add(child);
+                    } else if (bestNodeScore == childScore) {
+                        bestNodes.add(child);
+                    }
                 }
             }
 
-            return bestNode;
+            if (bestNodes.size() > 1) {
+                Random random = new Random();
+                int randomIndex = random.nextInt(bestNodes.size());
+
+                return bestNodes.get(randomIndex);
+            }
+
+            return bestNodes.get(0);
         }
 
         public List<Node> getChildren() {
@@ -263,7 +263,7 @@ public class BOTen_Anna implements IBot {
         public static int WIN_SCORE = 10;
         private int oponent;
 
-        public Node findNextMove(MonteState state, int playerNo) {
+        public IMove findNextMove(MonteState state) {
             long maxTime = System.currentTimeMillis() + 1000;
 
             oponent = state.getOpponent();
@@ -273,7 +273,8 @@ public class BOTen_Anna implements IBot {
 
             while (System.currentTimeMillis() < maxTime) {
                 Node promisingNode = selectPromisingNode(rootNode);
-                GameSimulator gameSimulator = new GameSimulator(promisingNode.getState());
+                GameSimulator gameSimulator = createSimulator(promisingNode.getState());/*new GameSimulator(promisingNode.getState());*/
+
                 if (gameSimulator.gameOver == GameOverState.Active) {
                     expandNode(promisingNode);
                 }
@@ -289,7 +290,7 @@ public class BOTen_Anna implements IBot {
 
             Node winnerNode = rootNode.getChildWithMaxScore();
             tree.setRoot(winnerNode);
-            return winnerNode;
+            return winnerNode.getState().getLastMove();
         }
 
         private Node selectPromisingNode(Node rootNode) {
@@ -326,7 +327,7 @@ public class BOTen_Anna implements IBot {
         private int simulateRandomPlayout(Node node) {
             Node tempNode = new Node(node);
             MonteState tempState = tempNode.getState();
-            GameSimulator gameSimulator = new GameSimulator(tempState);
+            GameSimulator gameSimulator = createSimulator(tempState);/*new GameSimulator(tempState);*/
             GameOverState boardStatus = gameSimulator.getGameOver();
 
             // Checks to see if the opponent has won
@@ -338,8 +339,7 @@ public class BOTen_Anna implements IBot {
             // Simulates moves until the game is decided
             while (boardStatus == GameOverState.Active) {
                 tempState.togglePlayer();
-                tempState.randomMove();
-                gameSimulator.updateGame(tempState.getLastMove());
+                gameSimulator.updateGame(tempState.randomMove());
                 boardStatus = gameSimulator.getGameOver();
             }
 
