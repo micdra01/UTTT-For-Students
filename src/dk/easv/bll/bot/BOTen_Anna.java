@@ -6,9 +6,7 @@ import dk.easv.bll.game.IGameState;
 import dk.easv.bll.move.IMove;
 import dk.easv.bll.move.Move;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Random;
+import java.util.*;
 
 public class BOTen_Anna implements IBot {
 
@@ -18,7 +16,22 @@ public class BOTen_Anna implements IBot {
 
     @Override
     public IMove doMove(IGameState state) {
-        long time = System.currentTimeMillis();
+        MonteCarloTreeSearch mcts = new MonteCarloTreeSearch();
+        MonteState monteState = new MonteState(state);
+        Node naisuNode = mcts.findNextMove(monteState, monteState.getMoveNumber());
+        IMove move = null;
+        for (int i = 0; i < naisuNode.getState().getField().getBoard().length; i++) {
+            for (int j = 0; j < naisuNode.getState().getField().getBoard()[i].length; j++) {
+                String naisuMove = naisuNode.getState().getField().getBoard()[i][j];
+                String parentMove = naisuNode.getParent().getState().getField().getBoard()[i][j];
+
+                if (!parentMove.equals(naisuMove)) {
+                    move = new Move(i, j);
+                }
+            }
+        }
+
+        /*long time = System.currentTimeMillis();
         Random rand = new Random();
         int count = 0;
         long maxTimeMs = 1000;
@@ -56,21 +69,313 @@ public class BOTen_Anna implements IBot {
             }
             count++;
         }
-
+        */
 
         /**
          * picks a random move
          */
         //System.out.println("Did not win, just doing random :¨(");
-        List<IMove> moves = state.getField().getAvailableMoves();
+        /*List<IMove> moves = state.getField().getAvailableMoves();
         IMove randomMovePlayer = moves.get(rand.nextInt(moves.size()));
         return randomMovePlayer; // just play randomly if solution not found
+         */
+        return move;
     }
 
     @Override
     public String getBotName() {
         return bot_name;
     }
+
+    public class MonteState extends GameState { // Board and playerNo are not needed, as they are implemented in GameState.
+        int visitCount; // Total number of games finished from this Node.
+        double winScore; // Total number of games won, from this Node.
+        IMove lastMove;
+
+        public MonteState(IGameState state) {
+            super(state);
+            visitCount = 0;
+            winScore = 0;
+        }
+
+        public MonteState(IGameState state, IMove lastMove) {
+            super(state);
+            visitCount = 0;
+            winScore = 0;
+            this.lastMove = lastMove;
+        }
+
+        // TODO look into why this doesn't return anything.
+        public List<MonteState> getAllPossibleStates() {
+            List<MonteState> possibleStates = new ArrayList<>();
+            List<IMove> availableMoves = getField().getAvailableMoves();
+            GameSimulator gameSimulator;
+
+            for (IMove move : availableMoves) {
+                gameSimulator = new GameSimulator(new MonteState(this));
+                gameSimulator.updateBoard(move);
+                possibleStates.add(new MonteState(gameSimulator.getCurrentState(), move));
+            }
+
+            return possibleStates;
+        }
+
+        public void randomMove() {
+            Random random = new Random();
+            List<MonteState> possibleStates = getAllPossibleStates();
+            System.out.println(possibleStates.size());
+            int randomIndex = random.nextInt(possibleStates.size());
+
+
+            getField().setBoard(possibleStates.get(randomIndex).getField().getBoard());
+            setLastMove(possibleStates.get(randomIndex).getLastMove());
+        }
+
+        public void setLastMove(IMove lastMove) {
+            this.lastMove = lastMove;
+        }
+
+        public IMove getLastMove() {
+            return lastMove;
+        }
+
+        public int getVisitCount() {
+            return visitCount;
+        }
+
+        public double getWinScore() {
+            return winScore;
+        }
+
+        public int getOpponent() {
+            return getMoveNumber() == 0 ? 1 : 0;
+        }
+
+        public void incrementVisitCount() {
+            visitCount++;
+        }
+
+        public void addWinScore(double score) {
+            winScore += score;
+        }
+
+        public void setWinScore(double score) {
+            this.winScore = score;
+        }
+
+        public void togglePlayer() {
+            setMoveNumber(getMoveNumber() == 0 ? 1 : 0);
+        }
+    }
+
+    public class Node {
+        MonteState gameState;
+        Node parent; // Parent of the current Node.
+        List<Node> children; // List of all possible moves, from the current Node.
+
+        public Node() {
+            children = new ArrayList<>();
+        }
+
+        public Node(MonteState gameState) {
+            this.gameState = gameState;
+            children = new ArrayList<>();
+        }
+
+        public Node(Node node) {
+            this.gameState = node.getState();
+            this.parent = node.getParent();
+            this.children = node.getChildren();
+        }
+
+        public Node getChildWithMaxScore() {
+            Node bestNode = this;
+
+            for (Node child : children) {
+                if (bestNode.getState().getWinScore() < child.getState().getWinScore()) {
+                    bestNode = child;
+                }
+            }
+
+            return bestNode;
+        }
+
+        public List<Node> getChildren() {
+            return children;
+        }
+
+        public MonteState getState() {
+            return gameState;
+        }
+
+        public Node getRandomChild() {
+            Random random = new Random();
+            int randomIndex = random.nextInt(children.size());
+
+            return children.get(randomIndex);
+        }
+
+        public void setParent(Node parent) {
+            this.parent = parent;
+        }
+
+        public Node getParent() {
+            return parent;
+        }
+    }
+
+    public class Tree {
+        Node root;
+
+        public Tree(MonteState state) {
+            root = new Node(state);
+        }
+
+        public void setRoot(Node node) {
+            this.root = node;
+        }
+
+        public Node getRoot() {
+            return root;
+        }
+    }
+
+    public class UCT {
+        public static double uctValue(int totalVisit, double nodeWinScore, int nodeVisit) {
+            if (nodeVisit == 0) {
+                return Integer.MAX_VALUE;
+            }
+
+            double bestNode = nodeWinScore / (double) nodeVisit;
+            double exploration = 1.41 * Math.sqrt(Math.log(totalVisit) / (double) nodeVisit);
+
+            return bestNode + exploration;
+        }
+
+        public static Node findBestNodeWithUCT(Node node) {
+            int parentVisit = node.getState().getVisitCount();
+
+            return Collections.max(node.getChildren(), Comparator.comparing((c -> uctValue(parentVisit, c.getState().getWinScore(), c.getState().getVisitCount()))));
+        }
+    }
+
+    public class MonteCarloTreeSearch {
+        public static int WIN_SCORE = 10;
+        private int oponent;
+
+        public Node findNextMove(MonteState state, int playerNo) {
+            long maxTime = System.currentTimeMillis() + 1000;
+
+            oponent = state.getOpponent();
+            Tree tree = new Tree(state);
+            Node rootNode = tree.getRoot();
+            rootNode.getState().setMoveNumber(oponent);
+
+            while (System.currentTimeMillis() < maxTime) {
+                Node promisingNode = selectPromisingNode(rootNode);
+                GameSimulator gameSimulator = new GameSimulator(promisingNode.getState());
+                if (gameSimulator.gameOver == GameOverState.Active) {
+                    expandNode(promisingNode);
+                }
+
+                Node nodeToExplore = promisingNode;
+                if (promisingNode.getChildren().size() > 0) {
+                    nodeToExplore = promisingNode.getRandomChild();
+                }
+
+                int playoutResult = simulateRandomPlayout(nodeToExplore);
+                backPropogation(nodeToExplore, playoutResult);
+            }
+
+            Node winnerNode = rootNode.getChildWithMaxScore();
+            tree.setRoot(winnerNode);
+            return winnerNode;
+        }
+
+        private Node selectPromisingNode(Node rootNode) {
+            Node node = rootNode;
+            while (node.getChildren().size() != 0) {
+                node = UCT.findBestNodeWithUCT(node);
+            }
+
+            return node;
+        }
+
+        private void expandNode(Node node) {
+            List<MonteState> possibleStates = node.getState().getAllPossibleStates();
+
+            possibleStates.forEach(state -> {
+                Node newNode = new Node(state);
+                newNode.setParent(node);
+                newNode.getState().setMoveNumber(node.getState().getOpponent());
+                node.getChildren().add(newNode);
+            });
+        }
+
+        private void backPropogation(Node nodeToExplore, int playerNo) {
+            Node tempNode = nodeToExplore;
+            while (tempNode != null) {
+                tempNode.getState().incrementVisitCount();
+                if (tempNode.getState().getMoveNumber() == playerNo) {
+                    tempNode.getState().addWinScore(WIN_SCORE);
+                }
+                tempNode = tempNode.getParent();
+            }
+        }
+
+        private int simulateRandomPlayout(Node node) {
+            Node tempNode = new Node(node);
+            MonteState tempState = tempNode.getState();
+            GameSimulator gameSimulator = new GameSimulator(tempState);
+            GameOverState boardStatus = gameSimulator.getGameOver();
+
+            // Checks to see if the opponent has won
+            if (boardStatus == GameOverState.Win && tempState.getMoveNumber() == oponent) {
+                tempNode.getParent().getState().setWinScore(Integer.MIN_VALUE);
+                return oponent;
+            }
+
+            // Simulates moves until the game is decided
+            while (boardStatus == GameOverState.Active) {
+                tempState.togglePlayer();
+                tempState.randomMove();
+                gameSimulator.updateGame(tempState.getLastMove());
+                boardStatus = gameSimulator.getGameOver();
+            }
+
+            if (boardStatus == GameOverState.Tie) {
+                return -1;
+            }
+
+            return tempState.getMoveNumber();
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     public enum GameOverState {
         Active,
         Win,
