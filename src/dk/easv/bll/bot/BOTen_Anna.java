@@ -17,12 +17,21 @@ public class BOTen_Anna implements IBot {
     @Override
     public IMove doMove(IGameState state) {
         MonteCarloTreeSearch mcts = new MonteCarloTreeSearch();
+        long end = System.currentTimeMillis() + 1000;
 
         MonteState boardState = new MonteState(state);
+        int moves = 3 * 3;
+        IMove move = null;
+        for (int i = 0; i < moves; i++/*System.currentTimeMillis() < end*/) {
+            move = mcts.findNextMove(boardState);
 
-        boardState = mcts.findNextMove(boardState);
+            GameSimulator gameSimulator = createSimulator(boardState);
 
-        return boardState.getLastMove();
+            if (gameSimulator.getGameOver() != GameOverState.Active) break;
+        }
+        return move;
+
+        //return mcts.findNextMove(boardState);
 
 
             /*long time = System.currentTimeMillis();
@@ -286,7 +295,7 @@ public class BOTen_Anna implements IBot {
         public static double TIE_SCORE = 5;
         private int oponent;
 
-        public MonteState findNextMove(MonteState state) {
+        public IMove findNextMove(MonteState state) {
             long maxTime = System.currentTimeMillis() + 1000;
 
             oponent = state.getOpponent();
@@ -294,7 +303,8 @@ public class BOTen_Anna implements IBot {
             Node rootNode = tree.getRoot();
             //rootNode.getState().setCurrentPlayer(oponent);
 
-            while (System.currentTimeMillis() < maxTime) {
+            int run = 0;
+            while (/*System.currentTimeMillis() < maxTimerun*/run < 3) {
                 Node promisingNode = selectPromisingNode(rootNode);
                 GameSimulator gameSimulator = createSimulator(promisingNode.getState());
 
@@ -309,11 +319,13 @@ public class BOTen_Anna implements IBot {
 
                 int playoutResult = simulateRandomPlayout(nodeToExplore);
                 backPropogation(nodeToExplore, playoutResult);
+
+                run++;
             }
 
             Node winnerNode = rootNode.getChildWithMaxScore();
             tree.setRoot(winnerNode);
-            return winnerNode.getState();
+            return winnerNode.getState().getLastMove();
         }
 
         private Node selectPromisingNode(Node rootNode) {
