@@ -13,12 +13,14 @@ import java.util.*;
 
 
 /**
+ * // todo kenni  
  * todo make a filter that looks for which rows are still possible to get 3 in a row local
  * todo should score lower than a local win and block, but still some points, so we know the local field can still be won
  */
 
 
 /**
+ * todo kenni
  * todo make a filter for what fields are possible to get 3 in  a macro row, (so we dont count local wins that dont matter in macro matter)
  * todo should not take moves that leads to opponent going to a macro field that you need to win.
  * todo should rank moves that sends opponent over to fields that cant be used in macro play anyways higher.
@@ -26,17 +28,20 @@ import java.util.*;
  */
 
 /**
+ * todo     Darling
  * todo     last method in our algorithm could (if time) make simple branching out from the top 2-3 nodes,
  * todo     and run all point methods through on the new result
  * todo     these could the be added up to a new best move score we then pick a result from
  */
 
 /**
+ * todo     steffan
  * todo     check if opponent gets free mocro turn
  * todo     should give minus points if the opponents next move is free on the macro board
  */
 
 /**
+ * todo    kenni
  * todo    check if the field that opponent can place in after our move is still Winnable for both us and opponent
  * todo    if the opponent can still use the micro board in macro play the move should get a lov score
  * todo    if we can use the micro field in macro play if so it should score low
