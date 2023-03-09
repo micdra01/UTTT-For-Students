@@ -28,7 +28,7 @@ import java.util.*;
  */
 
 /**
- * todo     steffan
+ * todo     Steffan
  * todo     check if opponent gets free mocro turn
  * todo     should give minus points if the opponents next move is free on the macro board
  */
@@ -52,14 +52,14 @@ public class BOTterThanYourself implements IBot {
 
     //todo here the points for whatever situation the method is checking for, so we can optimise via fine tuning
 
-    private int macroWin = 1000000;
-    private int localWinPoint = 500; //points when the move leads to an local win
+    private int macroWin = 10000000;
+    private int localWinPoint = 5000; //points when the move leads to an local win
     private int localBlockPoint = 600; //points when the move leads to an local win
     private int opponentLocalWinChance = -500; // points when move leads to enemy getting local win in next round
 
-    private int opponenCanWinMacroInNextMove = - 10000;
+    private int opponenCanWinMacroInNextMove = - 1000000;
 
-    private int isOwend = 100;
+    private int isOwend = 10;
     private int isTheMoveStillLocalWinnable = 5;
 
 
@@ -127,17 +127,11 @@ public class BOTterThanYourself implements IBot {
             Random r = new Random();
             int i = r.nextInt(scoredMoves.size());
             scoredMoves.sort(Comparator.comparing(Move::getScore));
-            System.out.println("random move = " + scoredMoves.get(0) + "ud af = " + scoredMoves.size() +  " moves" + "  score:  " + scoredMoves.get(0).getScore());
-            System.out.println("");
-            System.out.println("");
             return scoredMoves.get(0);
         }
 
 
 
-        System.out.println("kvalificeret bud =  " + result + "  score  : " + result.getScore());
-        System.out.println("");
-        System.out.println("");
 
         return result;
     }
@@ -197,7 +191,7 @@ public class BOTterThanYourself implements IBot {
                 }
                 if (i == startX + 3 - 1){
                     move.setScore(move.getScore() + isTheMoveStillLocalWinnable);
-                    System.out.println("the move can still lead to local win  " + move);
+                    //System.out.println("the move can still lead to local win  " + move);
                 }
             }
         }
