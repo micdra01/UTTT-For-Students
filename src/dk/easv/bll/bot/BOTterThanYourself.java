@@ -13,7 +13,6 @@ import java.util.*;
 //                                    master plan
 
 
-
 // todo    a list of methods that looks at how good a move is fx. localWin, BlockOpponentLocal, BlockOpponentMacro osv...
 // todo   new ideas to methods will only improve the algorithm as long as it is under 1 second in overall time and the points-given can be adjusted
 // todo   all methods are not necessary but will all help for a more qualified move
@@ -30,15 +29,24 @@ import java.util.*;
 // todo fx. winning local field should not give any points if the local field cant be used for winning macro play.
 
 
-
 /////////////////////////////////////////////////////////////////////////////////////////////
-
-
 
 
 /**
  * todo make a filter that looks for which rows are still possible to get 3 in a row local
  * todo should score lower than a local win and block, but still some points, so we know the local field can still be won
+ * <p>
+ * todo make a filter for what fields are possible to get 3 in  a macro row, (so we dont count local wins that dont matter in macro matter)
+ * todo should not take moves that leads to opponent going to a macro field that you need to win.
+ * todo should rank moves that sends opponent over to fields that cant be used in macro play anyways higher.
+ * <p>
+ * <p>
+ * todo     last method in our algorithm could (if time) make simple branching out from the top 2-3 nodes,
+ * todo     and run all point methods through on the new result
+ * todo     these could the be added up to a new best move score we then pick a result from
+ * <p>
+ * todo     check if opponent gets free mocro turn
+ * todo     should give minus points if the opponents next move is free on the macro board
  */
 
 
@@ -68,9 +76,6 @@ import java.util.*;
  */
 
 
-
-
-
 public class BOTterThanYourself implements IBot {
     final int moveTimeMs = 1000;
     private String BOT_NAME = getClass().getSimpleName();
@@ -83,9 +88,7 @@ public class BOTterThanYourself implements IBot {
     private int localBlockPoint = 25; //points when the move leads to an local win
     private int opponentLocalWinChance = -50; // points when move leads to enemy getting local win in next round
 
-    private int opponenCanWinMacroInNextMove = - 1000;
-
-
+    private int opponenCanWinMacroInNextMove = -1000;
 
 
     /**
@@ -106,11 +109,6 @@ public class BOTterThanYourself implements IBot {
             scoredMoves.add(scoreMove);
         }*/
 
-        List<Move> scoredMoves = getAvailableScoredMoves(state);
-        // TODO use all available moves in root
-        //List<Move> topMoves = getTopMoves(scoredMoves, 3);
-
-        lookAhead(scoredMoves, state);
         /*for (Move topMove : topMoves) {
             GameSimulator gs = createSimulator(state);
             gs.updateGame(topMove);
@@ -147,33 +145,25 @@ public class BOTterThanYourself implements IBot {
 
 
         //gets the highest score move and plays it
-
-       // Move result = new Move(0, 0, 0);// fake reference move
-        Move result = getBestMove(scoredMoves);
+        // Move result = new Move(0, 0, 0);// fake reference move
+        List<Move> moves = getAvailableScoredMoves(state);
+        Move result = lookAhead(moves, state, 5, 5);//getBestMove(scoredMoves);
         /*for (Move move : scoredMoves) {
             if (move.getScore() >= result.getScore()) {
                 result = move;
             }
         }*/
         //if all node are 0 it plays random
-        if (result.getScore() <= -100000) {
+        /*if (result.getScore() <= -100000) {
+            List<Move> availableMoves = getAvailableScoredMoves(state);
             Random r = new Random();
-            int i = r.nextInt(scoredMoves.size());
-            scoredMoves.sort(Comparator.comparing(Move::getScore));
-            System.out.println("random move = " + scoredMoves.get(0) + "ud af = " + scoredMoves.size() +  " moves" + "  score:  " + scoredMoves.get(0).getScore());
-            System.out.println("");
-            System.out.println("");
-            return scoredMoves.get(0);
-        }
-
-
-
-        System.out.println("kvalificeret bud =  " + result + "  score  : " + result.getScore());
-        System.out.println("");
-        System.out.println("");
-
+            int i = r.nextInt(availableMoves.size());
+            availableMoves.sort(Comparator.comparing(Move::getScore));
+            return availableMoves.get(i);
+        }*/
         return result;
     }
+
     private Move rateMove(IGameState state, Move move) {
         move = checkForLocalWin(state, move);
         move = checkForLocalBlock(state, move);
@@ -192,7 +182,7 @@ public class BOTterThanYourself implements IBot {
     private Move checkForOpponentMacroWin(IGameState state, Move move) {
         GameSimulator g = createSimulator(state);
 
-        if(g.updateGame(move)) {//checks if move is possible before updating board
+        if (g.updateGame(move)) {//checks if move is possible before updating board
             List<IMove> rootMoves = g.getCurrentState().getField().getAvailableMoves();
             List<Move> scoredMoves = new ArrayList<>();
             //makes moves into scoreMoves
@@ -201,12 +191,11 @@ public class BOTterThanYourself implements IBot {
                 scoredMoves.add(scoreMove);
             }
             //runs through all opponent moves to see if they will win
-            for (int i = 0; scoredMoves.size() > i; i++){
-                Move  opponentMove = scoredMoves.get(i);
-                if(g.updateGame(opponentMove)){
-                    if(g.getGameOver() == GameOverState.Win){
+            for (int i = 0; scoredMoves.size() > i; i++) {
+                Move opponentMove = scoredMoves.get(i);
+                if (g.updateGame(opponentMove)) {
+                    if (g.getGameOver() == GameOverState.Win) {
                         move.setScore(move.getScore() + opponenCanWinMacroInNextMove);
-                        System.out.println("watch out the opponent wil win if you play " + scoredMoves + "  score  : " + move.getScore());
                     }
                 }
             }
@@ -218,50 +207,39 @@ public class BOTterThanYourself implements IBot {
     private Move checkForMacroWin(IGameState state, Move move) {
         GameSimulator g = createSimulator(state);
         String currentPlayer = String.valueOf(g.currentPlayer);//gets the current player before we make a simulated move
-        if(g.updateGame(move)){//checks if move is possible before updating board
-            if(g.getGameOver()== GameOverState.Win){
+        if (g.updateGame(move)) {//checks if move is possible before updating board
+            if (g.getGameOver() == GameOverState.Win) {
                 move.setScore(move.getScore() + macroWin);//adds point to the move if it wins local
             }
         }
         return move;
     }
 
-    private void lookAhead(List<Move> topMoves, IGameState state) {
-        for (Move topMove : topMoves) {
-            GameSimulator gs = createSimulator(state);
+    private IGameState simulateMove(Move move, IGameState state) {
+        GameSimulator gs = createSimulator(state);
 
-            rateMove(state, topMove);
+        rateMove(gs.getCurrentState(), move);
 
-            gs.updateGame(topMove);
+        gs.updateGame(move);
 
-            List<Move> topCounterMoves = getTopCounterMoves(gs);
+        return gs.getCurrentState();
+    }
 
-            for (Move topCounterMove : topCounterMoves) {
-                GameSimulator gs2 = createSimulator(gs.getCurrentState());
+    private List<Move> simulateGames(List<Move> availableMoves, IGameState state, int expansions, int top, long end) {
+        if (expansions > 0 && System.currentTimeMillis() < end) {
+            for (Move moves : availableMoves) {
+                GameSimulator gs = createSimulator(simulateMove(moves, state));
 
-                rateMove(gs.getCurrentState(), topCounterMove);
-
-                gs2.updateGame(topCounterMove);
-
-                List<Move> topCountersToCounters = getTopCounterMoves(gs2);
-
-                for (Move topCounterToCounters : topCountersToCounters) {
-                    GameSimulator gs3 = createSimulator(gs2.getCurrentState());
-
-                    rateMove(gs2.getCurrentState(), topCounterToCounters);
-
-                    gs3.updateGame(topCounterToCounters);
-                }
-
-                if (!topCountersToCounters.isEmpty()) {
-                    topCounterMove.setScore(topCounterMove.getScore() - getBestMove(topCountersToCounters).getScore());
-                }
-            }
-
-            if (!topCounterMoves.isEmpty()) {
-                topMove.setScore(topMove.getScore() - getBestMove(topCounterMoves).getScore());
+                List<Move> counterMoves = getTopCounterMoves(gs.getCurrentState(), top);
+                simulateGames(counterMoves, gs.getCurrentState(), expansions - 1, top, end);
             }
         }
+
+        return availableMoves;
+    }
+
+    private Move lookAhead(List<Move> availableMoves, IGameState state, int expansions, int top) {
+        return getBestMove(simulateGames(availableMoves, state, expansions, top, System.currentTimeMillis() + 1000));
     }
 
     private List<Move> getAvailableScoredMoves(IGameState state) {
@@ -278,8 +256,8 @@ public class BOTterThanYourself implements IBot {
         return scoredMoves;
     }
 
-    private List<Move> getTopCounterMoves(GameSimulator gs) {
-        List<IMove> rootMoves = gs.getCurrentState().getField().getAvailableMoves();
+    private List<Move> getTopCounterMoves(IGameState state, int top) {
+        List<IMove> rootMoves = state.getField().getAvailableMoves();
         List<Move> scoredMoves = new ArrayList<>();
 
         for (IMove rootMove : rootMoves) {
@@ -287,9 +265,9 @@ public class BOTterThanYourself implements IBot {
             scoredMoves.add(newMove);
         }
 
-        addMoveScores(scoredMoves, gs.getCurrentState());
+        addMoveScores(scoredMoves, state);
 
-        return getTopMoves(scoredMoves, 3);
+        return getTopMoves(scoredMoves, top);
     }
 
     private Move getBestMove(List<Move> scoredMoves) {
@@ -298,12 +276,10 @@ public class BOTterThanYourself implements IBot {
         for (Move move : scoredMoves) {
             if (bestMoves.isEmpty()) {
                 bestMoves.add(move);
-            }
-            else if (bestMoves.get(0).getScore() < move.getScore()) {
+            } else if (bestMoves.get(0).getScore() < move.getScore()) {
                 bestMoves.clear();
                 bestMoves.add(move);
-            }
-            else if (bestMoves.get(0).getScore() == move.getScore()) {
+            } else if (bestMoves.get(0).getScore() == move.getScore()) {
                 bestMoves.add(move);
             }
         }
@@ -330,11 +306,9 @@ public class BOTterThanYourself implements IBot {
         sortedMoves.sort((o1, o2) -> {
             if (o1.getScore() < o2.getScore()) {
                 return 1;
-            }
-            else if (o1.getScore() == o2.getScore()) {
+            } else if (o1.getScore() == o2.getScore()) {
                 return 0;
-            }
-            else {
+            } else {
                 return -1;
             }
         });
@@ -379,7 +353,7 @@ public class BOTterThanYourself implements IBot {
     private Move checkForOpponentLocalWin(IGameState state, Move move) {
         GameSimulator g = createSimulator(state);
 
-        if(g.updateGame(move)) {//checks if move is possible before updating board
+        if (g.updateGame(move)) {//checks if move is possible before updating board
             List<IMove> rootMoves = g.getCurrentState().getField().getAvailableMoves();
             List<Move> scoredMoves = new ArrayList<>();
             //makes moves into scoreMoves
@@ -388,12 +362,11 @@ public class BOTterThanYourself implements IBot {
                 scoredMoves.add(scoreMove);
             }
             //runs through all opponent moves to see if they will win
-            for (int i = 0; scoredMoves.size() > i; i++){
-                Move  opponentMove = scoredMoves.get(i);
+            for (int i = 0; scoredMoves.size() > i; i++) {
+                Move opponentMove = scoredMoves.get(i);
                 opponentMove = checkForLocalWin(g.getCurrentState(), opponentMove);//checks for opponent local win
-                if(opponentMove.getScore() > 0){
-                    move.setScore(move.getScore() +  opponentLocalWinChance);
-                    System.out.println("we missed a opponenet local win" + move + "  score  : " + move.getScore());
+                if (opponentMove.getScore() > 0) {
+                    move.setScore(move.getScore() + opponentLocalWinChance);
                 }
             }
         }
@@ -408,27 +381,23 @@ public class BOTterThanYourself implements IBot {
     private Move checkForLocalBlock(IGameState state, Move move) {
         GameSimulator g = createSimulator(state);
         String currentPlayer = g.currentState.getMoveNumber() % 2 == 0 ? "1" : "0";//gets the current player before we make a simulated move
-        System.out.println(currentPlayer);
-        if(g.updateGame(move)){//checks if move is possible before updating board
+        if (g.updateGame(move)) {//checks if move is possible before updating board
             g.updateBoard(move);
-            if(g.isWin(g.getCurrentState().getField().getBoard(), move, currentPlayer)){//see if move will win miniBoard
+            if (g.isWin(g.getCurrentState().getField().getBoard(), move, currentPlayer)) {//see if move will win miniBoard
                 move.setScore(move.getScore() + localBlockPoint);//adds point to the move if it wins local
-                System.out.println("we found a local block " + move + "  score  : " + move.getScore());
             }
         }
         return move;
     }
 
 
-
-    private Move checkForLocalWin(IGameState state, Move move){
+    private Move checkForLocalWin(IGameState state, Move move) {
 
         GameSimulator g = createSimulator(state);
         String currentPlayer = String.valueOf(g.currentPlayer);//gets the current player before we make a simulated move
-        if(g.updateGame(move)){//checks if move is possible before updating board
-            if(g.isWin(g.getCurrentState().getField().getBoard(), move, currentPlayer)){//see if move will win miniBoard
+        if (g.updateGame(move)) {//checks if move is possible before updating board
+            if (g.isWin(g.getCurrentState().getField().getBoard(), move, currentPlayer)) {//see if move will win miniBoard
                 move.setScore(move.getScore() + localWinPoint);//adds point to the move if it wins local
-                System.out.println("we found a local win " + move + "  score  : " + move.getScore());
             }
         }
         return move;
@@ -475,6 +444,7 @@ public class BOTterThanYourself implements IBot {
     public class Move implements IMove {
         int x = 0;
         int y = 0;
+        Move lastMove = null;
 
         public int getScore() {
             return score;
@@ -495,6 +465,26 @@ public class BOTterThanYourself implements IBot {
             this.x = x;
             this.y = y;
             this.score = score;
+        }
+
+        public Move getHeadMove() {
+            if (lastMove != null) {
+                return lastMove.getHeadMove();
+            }
+            else {
+                return this;
+            }
+        }
+
+        public void updateLastMoveScore() {
+            if (lastMove != null) {
+                lastMove.setScore(lastMove.getScore() - getScore());
+                lastMove.updateLastMoveScore();
+            }
+        }
+
+        public void setLastMove(Move lastMove) {
+            this.lastMove = lastMove;
         }
 
         @Override
