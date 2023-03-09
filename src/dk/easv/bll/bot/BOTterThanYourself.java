@@ -88,6 +88,7 @@ public class BOTterThanYourself implements IBot {
     //todo here the points for whatever situation the method is checking for, so we can optimise via fine tuning
 
     private int macroWin = 10000000;
+    private int macroBlock = macroWin - 1000;
     private int localWinPoint = 5000; //points when the move leads to an local win
     private int localBlockPoint = 600; //points when the move leads to an local win
     private int opponentLocalWinChance = -500; // points when move leads to enemy getting local win in next round
@@ -95,6 +96,9 @@ public class BOTterThanYourself implements IBot {
 
     private int isOwend = 10;
     private int isTheMoveStillLocalWinnable = 5;
+    private int localUnwinnable = -10;
+    private int localWinnable = 10;
+    private int localPresence = 5;
 
 
     /**
@@ -175,6 +179,8 @@ public class BOTterThanYourself implements IBot {
         move = checkForMacroWin(state, move);
         move = checkForOpponentMacroWin(state, move);
         move = checkForPossibleLocalWin(state, move);
+        move = checkForMacroBlock(state, move);
+        move = checkForPresenceInMicro(state, move);
         return move;
     }
 
@@ -283,6 +289,95 @@ public class BOTterThanYourself implements IBot {
         if (g.updateGame(move)) {//checks if move is possible before updating board
             if (g.getGameOver() == GameOverState.Win) {
                 move.setScore(move.getScore() + macroWin);//adds point to the move if it wins local
+            }
+        }
+        return move;
+    }
+
+    private Move checkForMacroBlock(IGameState state, Move move) {
+        GameSimulator g = createSimulator(state);
+        int currentPlayer = g.currentState.getMoveNumber() % 2 == 0 ? 1 : 0;//gets the current player before we make a simulated move
+        g.setCurrentPlayer(currentPlayer);
+        if(g.updateGame(move)){//checks if move is possible before updating board
+            if(g.getGameOver()== GameOverState.Win){
+                move.setScore(move.getScore() + macroBlock);//adds point to the move if it wins local
+            }
+        }
+        return move;
+    }
+
+    private Move checkForPresenceInMicro(IGameState state, Move move) {
+        GameSimulator g = createSimulator(state);
+        String[][] board = g.getCurrentState().getField().getBoard();
+        String currentPlayer = "" + g.currentState.getMoveNumber() % 2;//gets the current player before we make a simulated move
+        String opponent = g.currentState.getMoveNumber() % 2 == 0 ? "1" : "0";
+
+        int localX = move.getX() % 3;
+        int localY = move.getY() % 3;
+        int startX = move.getX() - (localX);
+        int startY = move.getY() - (localY);
+
+        //check col
+        for (int i = startY; i < startY + 3; i++) {
+            if (board[move.getX()][i].equals(currentPlayer)) {
+                move.setScore(move.getScore() + localPresence);
+            }
+            if (board[move.getX()][i].equals(opponent)) {
+                move.setScore(move.getScore() + localUnwinnable);
+                break;
+            }
+
+            if (i == startY + 3 - 1) {
+                move.setScore(move.getScore() + localWinnable);
+            }
+        }
+
+        //check row
+        for (int i = startX; i < startX + 3; i++) {
+            if (board[i][move.getY()].equals(currentPlayer)) {
+                move.setScore(move.getScore() + localPresence);
+            }
+            if (board[i][move.getY()].equals(opponent)) {
+                move.setScore(move.getScore() + localUnwinnable);
+                break;
+            }
+            if (i == startX + 3 - 1) {
+                move.setScore(move.getScore() + localWinnable);
+            }
+        }
+
+        //check diagonal
+        if (localX == localY) {
+            //we're on a diagonal
+            int y = startY;
+            for (int i = startX; i < startX + 3; i++) {
+                if (board[i][y].equals(currentPlayer)) {
+                    move.setScore(move.getScore() + localPresence);
+                }
+                if (board[i][y++].equals(opponent)) {
+                    move.setScore(move.getScore() + localUnwinnable);
+                    break;
+                }
+                if (i == startX + 3 - 1) {
+                    move.setScore(move.getScore() + localWinnable);
+                }
+            }
+        }
+
+        //check anti diagonal
+        if (localX + localY == 3 - 1) {
+            int less = 0;
+            for (int i = startX; i < startX + 3; i++) {
+                if (board[i][(startY + 2) - less].equals(currentPlayer)) {
+                    move.setScore(move.getScore() + localPresence);
+                }
+                if (board[i][(startY + 2) - less++].equals(opponent)) {
+                    move.setScore(move.getScore() + localUnwinnable);
+                    break;
+                }
+                if (i == startX + 3 - 1) {
+                    move.setScore(move.getScore() + localWinnable);
+                }
             }
         }
         return move;
