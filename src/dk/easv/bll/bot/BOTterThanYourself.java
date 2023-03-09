@@ -6,6 +6,7 @@ import dk.easv.bll.game.GameState;
 import dk.easv.bll.game.IGameState;
 import dk.easv.bll.move.IMove;
 import dk.easv.bll.move.Move;
+import org.w3c.dom.ls.LSOutput;
 
 import java.util.*;
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -85,6 +86,8 @@ public class BOTterThanYourself implements IBot {
 
 
     //todo here the points for whatever situation the method is checking for, so we can optimise via fine tuning
+
+    private int macroWin = 1000;
     private int localWinPoint = 50; //points when the move leads to an local win
     private int localBlockPoint = 50; //points when the move leads to an local win
     private int opponentLocalWinChance = -51; // points when move leads to enemy getting local win in next round
@@ -121,6 +124,8 @@ public class BOTterThanYourself implements IBot {
 
             move = checkForOpponentLocalWin(state, move);//checks for opponent local wins in next move
 
+            move = checkForMacroWin(state, move);
+
 
         }
 
@@ -140,11 +145,29 @@ public class BOTterThanYourself implements IBot {
             int i = r.nextInt(scoredMoves.size());
             scoredMoves.sort(Comparator.comparing(Move::getScore));
             System.out.println("random move = " + scoredMoves.get(0) + "ud af = " + scoredMoves.size() +  " moves" + "  score:  " + scoredMoves.get(0).getScore());
+            System.out.println("");
+            System.out.println("");
             return scoredMoves.get(0);
         }
 
         System.out.println("kvalificeret bud =  " + result + "  score  : " + result.getScore());
+        System.out.println("");
+        System.out.println("");
+
         return result;
+    }
+
+
+    private Move checkForMacroWin(IGameState state, Move move) {
+        GameSimulator g = createSimulator(state);
+        String currentPlayer = String.valueOf(g.currentPlayer);//gets the current player before we make a simulated move
+        if(g.updateGame(move)){//checks if move is possible before updating board
+            if(g.getGameOver()== GameOverState.Win){
+                move.setScore(move.getScore() + macroWin);//adds point to the move if it wins local
+                System.out.println("we found a won biiiiitch " + move + "  score  : " + move.getScore());
+            }
+        }
+        return move;
     }
 
 
