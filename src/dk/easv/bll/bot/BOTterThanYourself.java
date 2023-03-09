@@ -7,12 +7,88 @@ import dk.easv.bll.game.IGameState;
 import dk.easv.bll.move.IMove;
 
 import java.util.*;
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//                                    master plan
+
+
+
+// todo    a list of methods that looks at how good a move is fx. localWin, BlockOpponentLocal, BlockOpponentMacro osv...
+// todo   new ideas to methods will only improve the algorithm as long as it is under 1 second in overall time and the points-given can be adjusted
+// todo   all methods are not necessary but will all help for a more qualified move
+
+// todo    each method should take a move and check if the current situations is filled and score accordingly
+// todo   fx. a move that leads to a local win gives an amount of points and opponent win gives minus points
+
+// todo    we should add each scorePoint-amount as an instance variable, in top of the document
+// todo   fx amount of points added to a move when localWin is obtained should be saved in top of our bot class so we can twitch the amount of point easy at a later time
+
+// todo   when all filter/point-giver-methods has ended and all the points are added up on the available moves we should play the one with most points
+
+//todo macro play methods should run before local methods, as local points can depend on macro situation
+// todo fx. winning local field should not give any points if the local field cant be used for winning macro play.
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+/**
+ * //todo check if we can block for opponent local-win with our move
+ * //todo if the move blocks it gains some points
+ */
+
+/**
+ * todo check if opponent can get a micro win in next move if you make an move
+ * todo should take move in parameter
+ * todo simulate the players move
+ * todo check if opponent has an local win move
+ * todo if the opponent can win a miniBoard the move should be reduced in points
+ *
+ */
+
+/**
+ * todo check if the opponent can get a macroWin in next turn
+ * todo should only run if opponent can get local win on local board  (as it cant happen else... so waste of time)
+ * todo should only run if 2 macro fields are won already
+ * todo if the move leads to opponent macro win it should get lowest score
+ */
+
+/**
+ * todo checks if our bot player can get a macro win in its next turns
+ * todo should only be run late late game, when 2 fields are taken
+ * todo if we can win the move should be given a high score
+ */
+
+
+/**
+ * todo make a filter that looks for which rows are still possible to get 3 in a row local
+ * todo should score lower than a local win and block, but still some points, so we know the local filed can still be won
+ */
+
+
+/**
+ * todo make a filter for what fields are possible to get 3 in  a macro row, (so we dont count local wins that dont matter in macro matter)
+ * todo should not take moves that leads to opponent going to a macro field that you need to win.
+ * todo should rank moves that sends opponent over to fields that cant be used in macro play anyways higher.
+ *
+ */
+
+/**
+ * todo     last method in our algorithm could (if time) make simple branching out from the top 2-3 nodes,
+ * todo     and run all point methods through on the new result
+ * todo     these could the be added up to a new best move score we then pick a result from
+ */
+
+
+
 
 
 public class BOTterThanYourself implements IBot {
     final int moveTimeMs = 1000;
     private String BOT_NAME = getClass().getSimpleName();
 
+
+    //todo here the points for whatever situation the method is checking for, so we can optimise via fine tuning
     private int localWinPoint = 50;
 
     /**
@@ -39,26 +115,18 @@ public class BOTterThanYourself implements IBot {
         List<IMove> rootMoves = gs.getCurrentState().getField().getAvailableMoves();//all possible moves from current state
         List<Move> scoredMoves = new ArrayList<>();
 
-
         //make each move into a score move that contains a score
         for(IMove moves: rootMoves) {
             Move scoreMove = new Move(moves.getX(), moves.getY());
             scoredMoves.add(scoreMove);
         }
 
-
         //runs through all filters on each available move
-        //todo all filter methods should be placed here
+        //todo all filter/ point methods methods should be placed here
         for(Move move: scoredMoves ) {
-
             //cheks for local win in this round
             move = checkForLocalWin(state, move);
-
-
         }
-
-
-
 
         //gets the highest score move and plays it
         scoredMoves.sort(Comparator.comparing(Move::getScore));
@@ -76,59 +144,6 @@ public class BOTterThanYourself implements IBot {
         }
         return result;
     }
-
-          //////////////////////////////////////////////////////////////////////////////////////////////////////
-          //                                    master plan
-
-          // todo    a long list of methods that looks at how good a move is fx. localWin, BlockPlayer MacroWin..
-          // todo    each method should take a list of moves check if the current situations is filled and score accordingly
-          // todo   fx. a move that leads to a local win an amount of points and opponent win gives minus points
-          // todo    we should save each score point a an instance variable,
-          // todo   fx amount of points added to a move when localWin is obtained should be saved in top of our bot class so we can twitch the amount of point easy at a later time
-          // todo   when all filter/point giver methods have ended and all the points are added up on the available moves we should play the one with most points
-
-
-
-          // todo   all methods are not necessary but will all help for a more qualified move,
-          /////////////////////////////////////////////////////////////////////////////////////////////
-
-
-          /**
-           * //todo filter through a list of moves and score them points if they block opponent
-           * //todo if the move blocks it gains some points
-           */
-
-
-          /**
-           * todo a filter that sees if the opponent can get a micro win in next move
-           * todo if the opponent can win a miniBoard the move should be reduced in points
-           */
-
-          /**
-           * todo a filter that checks if the opponent can get a macroWin
-           * todo should only run if 2 macro fields are won already
-           * todo if the move leads to opponent macro win it should get lowest score
-           */
-
-          /**
-           * todo a filter that checks if player can get a macro win in 2 turns
-           * todo should only be run late late game, when 2 fields are taken
-           * todo if we can win the move should be given a high score
-           */
-
-
-          /**
-           * todo make a filter that looks for which rows are still possible to get 3 in a row
-           * todo should score lower than a local win and block, but still some points, so we know the local filed can still be won
-           */
-
-          /**
-           * todo
-           */
-
-
-        //todo sort list of  after points and return the move with most points
-
 
 
 
