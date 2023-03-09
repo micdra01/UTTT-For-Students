@@ -34,14 +34,7 @@ import java.util.*;
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 
-/**
- * todo check if opponent can get a micro win in next move if you make an move
- * todo should take move in parameter
- * todo simulate the players move
- * todo check if opponent has an local win move
- * todo if the opponent can win a miniBoard the move should be reduced in points
- *
- */
+
 
 /**
  * todo check if the opponent can get a macroWin in next turn
@@ -50,11 +43,6 @@ import java.util.*;
  * todo if the move leads to opponent macro win it should get lowest score
  */
 
-/**
- * todo checks if our bot player can get a macro win in its next turns
- * todo should only be run late late game, when 2 fields are taken
- * todo if we can win the move should be given a high score
- */
 
 
 /**
