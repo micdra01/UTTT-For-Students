@@ -75,10 +75,12 @@ public class BOTterThanYourself implements IBot {
 
     //todo here the points for whatever situation the method is checking for, so we can optimise via fine tuning
 
-    private int macroWin = 1000;
+    private int macroWin = 100000;
     private int localWinPoint = 50; //points when the move leads to an local win
     private int localBlockPoint = 50; //points when the move leads to an local win
     private int opponentLocalWinChance = -50; // points when move leads to enemy getting local win in next round
+
+    private int opponenCanWinMacroInNextMove = - 1000;
 
 
 
@@ -105,19 +107,9 @@ public class BOTterThanYourself implements IBot {
 
         for (Move move : scoredMoves) {
 
-            //todo all filter/ point methods methods should be placed here
-            move = checkForLocalWin(state, move);  //checks for local win in this round
-
-            move = checkForLocalBlock(state, move);  //checks for possible block moves
-
-            move = checkForOpponentLocalWin(state, move);//checks for opponent local wins in next move
-
-            move = checkForMacroWin(state, move);
-
-
+            rateMove(state, move);
         }
 
-        System.out.println();
         //gets the highest score move and plays it
         Move result = scoredMoves.get(0);
         //Move result = new Move(0, 0, 0);// fake reference move
@@ -128,7 +120,7 @@ public class BOTterThanYourself implements IBot {
             }
         }
         //if all node are 0 it plays random
-        if (result.getScore() <= -2) {
+        if (result.getScore() <= -100000) {
             Random r = new Random();
             int i = r.nextInt(scoredMoves.size());
             scoredMoves.sort(Comparator.comparing(Move::getScore));
@@ -138,11 +130,52 @@ public class BOTterThanYourself implements IBot {
             return scoredMoves.get(0);
         }
 
+
+
         System.out.println("kvalificeret bud =  " + result + "  score  : " + result.getScore());
         System.out.println("");
         System.out.println("");
 
         return result;
+    }
+    private Move rateMove(IGameState state, Move move) {
+        move = checkForLocalWin(state, move);
+        move = checkForLocalBlock(state, move);
+        move = checkForOpponentLocalWin(state, move);
+        move = checkForMacroWin(state, move);
+        move = checkForOpponentMacroWin(state, move);
+        return move;
+    }
+
+    /**
+     *
+     * @param state
+     * @param move
+     * @return
+     */
+    private Move checkForOpponentMacroWin(IGameState state, Move move) {
+        GameSimulator g = createSimulator(state);
+
+        if(g.updateGame(move)) {//checks if move is possible before updating board
+            List<IMove> rootMoves = g.getCurrentState().getField().getAvailableMoves();
+            List<Move> scoredMoves = new ArrayList<>();
+            //makes moves into scoreMoves
+            for (IMove moves : rootMoves) {
+                Move scoreMove = new Move(moves.getX(), moves.getY());
+                scoredMoves.add(scoreMove);
+            }
+            //runs through all opponent moves to see if they will win
+            for (int i = 0; scoredMoves.size() > i; i++){
+                Move  opponentMove = scoredMoves.get(i);
+                if(g.updateGame(opponentMove)){
+                    if(g.getGameOver() == GameOverState.Win){
+                        move.setScore(move.getScore() + opponenCanWinMacroInNextMove);
+                        System.out.println("watch out the opponent wil win if you play " + scoredMoves + "  score  : " + move.getScore());
+                    }
+                }
+            }
+        }
+        return move;
     }
 
 
@@ -152,7 +185,6 @@ public class BOTterThanYourself implements IBot {
         if(g.updateGame(move)){//checks if move is possible before updating board
             if(g.getGameOver()== GameOverState.Win){
                 move.setScore(move.getScore() + macroWin);//adds point to the move if it wins local
-                System.out.println("we found a won biiiiitch " + move + "  score  : " + move.getScore());
             }
         }
         return move;
