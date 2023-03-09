@@ -90,7 +90,7 @@ public class BOTterThanYourself implements IBot {
     private int macroWin = 1000;
     private int localWinPoint = 50; //points when the move leads to an local win
     private int localBlockPoint = 50; //points when the move leads to an local win
-    private int opponentLocalWinChance = -51; // points when move leads to enemy getting local win in next round
+    private int opponentLocalWinChance = -50; // points when move leads to enemy getting local win in next round
 
 
 
@@ -129,7 +129,7 @@ public class BOTterThanYourself implements IBot {
 
         }
 
-
+        System.out.println();
         //gets the highest score move and plays it
         Move result = scoredMoves.get(0);
         //Move result = new Move(0, 0, 0);// fake reference move
@@ -211,6 +211,7 @@ public class BOTterThanYourself implements IBot {
         String currentPlayer = g.currentState.getMoveNumber() % 2 == 0 ? "1" : "0";//gets the current player before we make a simulated move
         System.out.println(currentPlayer);
         if(g.updateGame(move)){//checks if move is possible before updating board
+            g.updateBoard(move);
             if(g.isWin(g.getCurrentState().getField().getBoard(), move, currentPlayer)){//see if move will win miniBoard
                 move.setScore(move.getScore() + localBlockPoint);//adds point to the move if it wins local
                 System.out.println("we found a local block " + move + "  score  : " + move.getScore());
