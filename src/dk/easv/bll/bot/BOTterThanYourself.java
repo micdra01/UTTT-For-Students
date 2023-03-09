@@ -1,24 +1,138 @@
 
 package dk.easv.bll.bot;
 
-import dk.easv.bll.bot.IBot;
 import dk.easv.bll.field.IField;
 import dk.easv.bll.game.GameState;
 import dk.easv.bll.game.IGameState;
 import dk.easv.bll.move.IMove;
-import org.w3c.dom.ls.LSOutput;
 
-import java.sql.ClientInfoStatus;
-import java.util.List;
-import java.util.Objects;
-import java.util.Random;
+import java.util.*;
 
 
-
-
-public class BotterThanYourself implements IBot {
+public class BOTterThanYourself implements IBot {
     final int moveTimeMs = 1000;
     private String BOT_NAME = getClass().getSimpleName();
+
+    private int localWinPoint = 50;
+
+    /**
+     * gets moves that result in a win on mini Board.
+     */
+    private Move checkForLocalWin(IGameState state, Move move){
+
+            GameSimulator g = createSimulator(state);
+            String currentPlayer = String.valueOf(g.currentPlayer);//gets the current player before we make a simulated move
+            if(g.updateGame(move)){//checks if move is possible before updating board
+                 if(g.isWin(g.getCurrentState().getField().getBoard(), move, currentPlayer)){//see if move will win miniBoard
+                     move.setScore(localWinPoint);//adds point to the move if it wins local
+                     System.out.println("vi fandt en ");
+                 }
+            }
+        return move;
+    }
+
+    @Override
+    public IMove doMove(IGameState state) {
+
+        //start of method gets the first available moves and creates a list of scored moves
+        GameSimulator gs = createSimulator(state);//gets created so we can get available moves
+        List<IMove> rootMoves = gs.getCurrentState().getField().getAvailableMoves();//all possible moves from current state
+        List<Move> scoredMoves = new ArrayList<>();
+
+
+        //make each move into a score move that contains a score
+        for(IMove moves: rootMoves) {
+            Move scoreMove = new Move(moves.getX(), moves.getY());
+            scoredMoves.add(scoreMove);
+        }
+
+
+        //runs through all filters on each available move
+        //todo all filter methods should be placed here
+        for(Move move: scoredMoves ) {
+
+            //cheks for local win in this round
+            move = checkForLocalWin(state, move);
+
+
+        }
+
+
+
+
+        //gets the highest score move and plays it
+        scoredMoves.sort(Comparator.comparing(Move::getScore));
+        Move result = new Move(0,0);// fake reference move
+        for(Move move: scoredMoves ){;
+            if(move.getScore() >= result.getScore()){
+                result = move;
+            }
+        }
+        //if all node are 0 it plays random
+        if (result.getScore() == 0){
+            Random r = new Random();
+            System.out.println("dont have a good move");
+            return scoredMoves.get(r.nextInt(scoredMoves.size()));
+        }
+        return result;
+    }
+
+          //////////////////////////////////////////////////////////////////////////////////////////////////////
+          //                                    master plan
+
+          // todo    a long list of methods that looks at how good a move is fx. localWin, BlockPlayer MacroWin..
+          // todo    each method should take a list of moves check if the current situations is filled and score accordingly
+          // todo   fx. a move that leads to a local win an amount of points and opponent win gives minus points
+          // todo    we should save each score point a an instance variable,
+          // todo   fx amount of points added to a move when localWin is obtained should be saved in top of our bot class so we can twitch the amount of point easy at a later time
+          // todo   when all filter/point giver methods have ended and all the points are added up on the available moves we should play the one with most points
+
+
+
+          // todo   all methods are not necessary but will all help for a more qualified move,
+          /////////////////////////////////////////////////////////////////////////////////////////////
+
+
+          /**
+           * //todo filter through a list of moves and score them points if they block opponent
+           * //todo if the move blocks it gains some points
+           */
+
+
+          /**
+           * todo a filter that sees if the opponent can get a micro win in next move
+           * todo if the opponent can win a miniBoard the move should be reduced in points
+           */
+
+          /**
+           * todo a filter that checks if the opponent can get a macroWin
+           * todo should only run if 2 macro fields are won already
+           * todo if the move leads to opponent macro win it should get lowest score
+           */
+
+          /**
+           * todo a filter that checks if player can get a macro win in 2 turns
+           * todo should only be run late late game, when 2 fields are taken
+           * todo if we can win the move should be given a high score
+           */
+
+
+          /**
+           * todo make a filter that looks for which rows are still possible to get 3 in a row
+           * todo should score lower than a local win and block, but still some points, so we know the local filed can still be won
+           */
+
+          /**
+           * todo
+           */
+
+
+        //todo sort list of  after points and return the move with most points
+
+
+
+
+
 
     private GameSimulator createSimulator(IGameState state) {
         GameSimulator simulator = new GameSimulator(new GameState());
@@ -34,78 +148,6 @@ public class BotterThanYourself implements IBot {
 
 
 
-
-   public class ScoreMove implements IMove{
-        int score = 0;
-
-        int x;
-        int y;
-
-        public ScoreMove(int x, int y){
-            this.x = x;
-            this.y = y;
-        }
-
-       @Override
-       public int getX() {
-           return x;
-       }
-
-       @Override
-       public int getY() {
-           return y;
-       }
-   }
-
-   public boolean checkForMicroWin(IGameState state){
-        String[][] board = state.getField().getBoard();
-       String s = null;
-        for (int i = 0; i < 3; i++){
-            for (int j = 0; j < 3; j++){
-                s = s + board[i][j];
-            }
-            System.out.println(s);
-
-        }
-       System.out.println(s);
-     return false;
-   }
-
-    @Override
-    public IMove doMove(IGameState state) {
-        GameSimulator gs = createSimulator(state);
-        List<IMove> availableMoves = gs.getCurrentState().getField().getAvailableMoves();
-        String[][] board = state.getField().getBoard();
-
-        IMove winningMove = null;
-        checkForMicroWin(state);
-
-
-        //check if move will win
-      for(IMove moves: availableMoves){
-          GameSimulator g = gs;
-          if(g.updateGame(moves)){
-              if(g.isWin(gs.getCurrentState().getField().getBoard(), moves, "")){
-                  winningMove = moves;
-                  System.out.println("dd");
-                  return winningMove;
-              }
-
-
-          }
-
-          //list through first turn for player
-
-      }
-
-
-        System.out.println("random");
-
-        //todo sort list of moves
-       return availableMoves.get(1);
-    }
-
-
     /*
         The code below is a simulator for simulation of gameplay. This is needed for AI.
 
@@ -117,6 +159,7 @@ public class BotterThanYourself implements IBot {
         changed accordingly, making the code redundant.
 
      */
+
 
     @Override
     public String getBotName() {
@@ -133,7 +176,15 @@ public class BotterThanYourself implements IBot {
         int x = 0;
         int y = 0;
 
-        int score = 0;
+        public int getScore() {
+            return score;
+        }
+
+        public void setScore(int score) {
+            this.score = score;
+        }
+
+        public int score = 0;
 
         public Move(int x, int y) {
             this.x = x;
@@ -194,7 +245,7 @@ public class BotterThanYourself implements IBot {
             this.currentState = currentState;
         }
 
-        public Boolean updateGame(IMove move) {
+        public Boolean updateGame(Move move) {
             if (!verifyMoveLegality(move))
                 return false;
 
