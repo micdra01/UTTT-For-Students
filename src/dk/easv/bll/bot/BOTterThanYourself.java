@@ -9,30 +9,6 @@ import dk.easv.bll.move.Move;
 import org.w3c.dom.ls.LSOutput;
 
 import java.util.*;
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-//                                    master plan
-
-
-
-// todo    a list of methods that looks at how good a move is fx. localWin, BlockOpponentLocal, BlockOpponentMacro osv...
-// todo   new ideas to methods will only improve the algorithm as long as it is under 1 second in overall time and the points-given can be adjusted
-// todo   all methods are not necessary but will all help for a more qualified move
-
-// todo    each method should take a move and check if the current situations is filled and score accordingly
-// todo   fx. a move that leads to a local win gives an amount of points and opponent win gives minus points
-
-// todo    we should add each scorePoint-amount as an instance variable, in top of the document
-// todo   fx amount of points added to a move when localWin is obtained should be saved in top of our bot class so we can twitch the amount of point easy at a later time
-
-// todo   when all filter/point-giver-methods has ended and all the points are added up on the available moves we should play the one with most points
-
-//todo macro play methods should run before local methods, as local points can depend on macro situation
-// todo fx. winning local field should not give any points if the local field cant be used for winning macro play.
-
-
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-
 
 
 
