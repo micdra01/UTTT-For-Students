@@ -33,6 +33,7 @@ import java.util.*;
 
 
 /**
+ * todo kenni
  * todo make a filter that looks for which rows are still possible to get 3 in a row local
  * todo should score lower than a local win and block, but still some points, so we know the local field can still be won
  * <p>
@@ -58,17 +59,20 @@ import java.util.*;
  */
 
 /**
+ * todo     Darling
  * todo     last method in our algorithm could (if time) make simple branching out from the top 2-3 nodes,
  * todo     and run all point methods through on the new result
  * todo     these could the be added up to a new best move score we then pick a result from
  */
 
 /**
+ * todo     Steffan
  * todo     check if opponent gets free mocro turn
  * todo     should give minus points if the opponents next move is free on the macro board
  */
 
 /**
+ * todo    kenni
  * todo    check if the field that opponent can place in after our move is still Winnable for both us and opponent
  * todo    if the opponent can still use the micro board in macro play the move should get a lov score
  * todo    if we can use the micro field in macro play if so it should score low
@@ -83,12 +87,14 @@ public class BOTterThanYourself implements IBot {
 
     //todo here the points for whatever situation the method is checking for, so we can optimise via fine tuning
 
-    private int macroWin = 100000;
-    private int localWinPoint = 50; //points when the move leads to an local win
-    private int localBlockPoint = 25; //points when the move leads to an local win
-    private int opponentLocalWinChance = -50; // points when move leads to enemy getting local win in next round
+    private int macroWin = 10000000;
+    private int localWinPoint = 5000; //points when the move leads to an local win
+    private int localBlockPoint = 600; //points when the move leads to an local win
+    private int opponentLocalWinChance = -500; // points when move leads to enemy getting local win in next round
+    private int opponenCanWinMacroInNextMove = - 1000000;
 
-    private int opponenCanWinMacroInNextMove = -1000;
+    private int isOwend = 10;
+    private int isTheMoveStillLocalWinnable = 5;
 
 
     /**
@@ -98,16 +104,6 @@ public class BOTterThanYourself implements IBot {
     @Override
     public IMove doMove(IGameState state) {
 
-        //start of method gets the first available moves and creates a list of scored moves
-        /*GameSimulator gs = createSimulator(state);//gets created so we can get available moves
-        List<IMove> rootMoves = gs.getCurrentState().getField().getAvailableMoves();//all possible moves from current state
-        List<Move> scoredMoves = new ArrayList<>();
-
-        //make each move into a score move that contains a score
-        for (IMove moves : rootMoves) {
-            Move scoreMove = new Move(moves.getX(), moves.getY());
-            scoredMoves.add(scoreMove);
-        }*/
 
         /*for (Move topMove : topMoves) {
             GameSimulator gs = createSimulator(state);
@@ -157,6 +153,14 @@ public class BOTterThanYourself implements IBot {
         /*if (result.getScore() <= -100000) {
             List<Move> availableMoves = getAvailableScoredMoves(state);
             Random r = new Random();
+            int i = r.nextInt(scoredMoves.size());
+            scoredMoves.sort(Comparator.comparing(Move::getScore));
+            return scoredMoves.get(0);
+        }
+
+
+
+
             int i = r.nextInt(availableMoves.size());
             availableMoves.sort(Comparator.comparing(Move::getScore));
             return availableMoves.get(i);
@@ -170,6 +174,74 @@ public class BOTterThanYourself implements IBot {
         move = checkForOpponentLocalWin(state, move);
         move = checkForMacroWin(state, move);
         move = checkForOpponentMacroWin(state, move);
+        move = checkForPossibleLocalWin(state, move);
+        return move;
+    }
+
+    private Move checkForPossibleLocalWin(IGameState state, Move move) {
+       GameSimulator g = new GameSimulator(state);
+       String[][] board = state.getField().getBoard();
+
+        int localX = move.getX() % 3;
+        int localY = move.getY() % 3;
+        int startX = move.getX() - (localX);
+        int startY = move.getY() - (localY);
+
+
+
+        //check col
+        for (int i = startY; i < startY + 3; i++) {
+            if (!board[move.getX()][i].equals("" + g.currentPlayer)){
+                if (!board[move.getX()][i].equals(".")) {
+                    break;}
+            }
+            if(board[move.getX()][i].equals("" + g.currentPlayer))move.setScore(move.getScore() + isOwend);
+            if (i == startY + 3 - 1) {
+                move.setScore(move.getScore() + isTheMoveStillLocalWinnable);
+            }
+        }
+
+        //check row
+        for (int i = startX; i < startX + 3; i++) {
+            if (!board[i][move.getY()].equals("" +g.currentPlayer )){
+                if (!board[move.getX()][i].equals(".")) {
+                    break;}
+            }
+            if(board[i][move.getY()].equals("" +g.currentPlayer )) move.setScore(move.getScore() + isOwend);
+            if (i == startX + 3 - 1) {
+                move.setScore(move.getScore() + isTheMoveStillLocalWinnable);
+            }
+        }
+
+        //check diagonal
+        if (localX == localY) {
+            //we're on a diagonal
+            int y = startY;
+            for (int i = startX; i < startX + 3; i++) {
+                if (!board[i][y++].equals("" + g.currentPlayer) ){
+                    if (!board[move.getX()][i].equals(".")) {
+                        break;}
+                }
+                if (i == startX + 3 - 1){
+                    move.setScore(move.getScore() + isTheMoveStillLocalWinnable);
+                    //System.out.println("the move can still lead to local win  " + move);
+                }
+            }
+        }
+
+        //check anti diagonal
+        if (localX + localY == 3 - 1) {
+            int less = 0;
+            for (int i = startX; i < startX + 3; i++) {
+                if (!board[i][(startY + 2) - less++].equals("" + g.currentPlayer)){
+                    if (!board[move.getX()][i].equals(".")) {
+                        break;}
+                }
+                if (i == startX + 3 - 1) {
+                    move.setScore(move.getScore() + isTheMoveStillLocalWinnable);
+                }
+            }
+        }
         return move;
     }
 
@@ -196,6 +268,7 @@ public class BOTterThanYourself implements IBot {
                 if (g.updateGame(opponentMove)) {
                     if (g.getGameOver() == GameOverState.Win) {
                         move.setScore(move.getScore() + opponenCanWinMacroInNextMove);
+                       // System.out.println("watch out the opponent wil win if you play " + scoredMoves + "  score  : " + move.getScore());
                     }
                 }
             }
@@ -444,7 +517,6 @@ public class BOTterThanYourself implements IBot {
     public class Move implements IMove {
         int x = 0;
         int y = 0;
-        Move lastMove = null;
 
         public int getScore() {
             return score;
@@ -465,26 +537,6 @@ public class BOTterThanYourself implements IBot {
             this.x = x;
             this.y = y;
             this.score = score;
-        }
-
-        public Move getHeadMove() {
-            if (lastMove != null) {
-                return lastMove.getHeadMove();
-            }
-            else {
-                return this;
-            }
-        }
-
-        public void updateLastMoveScore() {
-            if (lastMove != null) {
-                lastMove.setScore(lastMove.getScore() - getScore());
-                lastMove.updateLastMoveScore();
-            }
-        }
-
-        public void setLastMove(Move lastMove) {
-            this.lastMove = lastMove;
         }
 
         @Override
