@@ -5,6 +5,7 @@ import dk.easv.bll.field.IField;
 import dk.easv.bll.game.GameState;
 import dk.easv.bll.game.IGameState;
 import dk.easv.bll.move.IMove;
+import dk.easv.bll.move.Move;
 
 import java.util.*;
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -33,11 +34,6 @@ import java.util.*;
 
 
 /**
- * //todo check if we can block for opponent local-win with our move
- * //todo if the move blocks it gains some points
- */
-
-/**
  * todo check if opponent can get a micro win in next move if you make an move
  * todo should take move in parameter
  * todo simulate the players move
@@ -62,7 +58,7 @@ import java.util.*;
 
 /**
  * todo make a filter that looks for which rows are still possible to get 3 in a row local
- * todo should score lower than a local win and block, but still some points, so we know the local filed can still be won
+ * todo should score lower than a local win and block, but still some points, so we know the local field can still be won
  */
 
 
@@ -89,23 +85,15 @@ public class BOTterThanYourself implements IBot {
 
 
     //todo here the points for whatever situation the method is checking for, so we can optimise via fine tuning
-    private int localWinPoint = 50;
+    private int localWinPoint = 50; //points when the move leads to an local win
+    private int opponentLocalWinChance = -51; // points when move leads to enemy getting local win in next round
+
+
+
 
     /**
      * gets moves that result in a win on mini Board.
      */
-    private Move checkForLocalWin(IGameState state, Move move){
-
-            GameSimulator g = createSimulator(state);
-            String currentPlayer = String.valueOf(g.currentPlayer);//gets the current player before we make a simulated move
-            if(g.updateGame(move)){//checks if move is possible before updating board
-                 if(g.isWin(g.getCurrentState().getField().getBoard(), move, currentPlayer)){//see if move will win miniBoard
-                     move.setScore(localWinPoint);//adds point to the move if it wins local
-                     System.out.println("vi fandt en ");
-                 }
-            }
-        return move;
-    }
 
     @Override
     public IMove doMove(IGameState state) {
@@ -116,38 +104,102 @@ public class BOTterThanYourself implements IBot {
         List<Move> scoredMoves = new ArrayList<>();
 
         //make each move into a score move that contains a score
-        for(IMove moves: rootMoves) {
+        for (IMove moves : rootMoves) {
             Move scoreMove = new Move(moves.getX(), moves.getY());
             scoredMoves.add(scoreMove);
         }
 
         //runs through all filters on each available move
-        //todo all filter/ point methods methods should be placed here
-        for(Move move: scoredMoves ) {
-            //cheks for local win in this round
-            move = checkForLocalWin(state, move);
+
+        for (Move move : scoredMoves) {
+
+            //todo all filter/ point methods methods should be placed here
+            move = checkForLocalWin(state, move);  //checks for local win in this round
+
+            move = checkForLocalBlock(state, move);  //checks for possible block moves
+
+            move = checkForOpponentLocalWin(state, move);//checks for opponent local wins in next move
+
+
         }
 
+
         //gets the highest score move and plays it
-        scoredMoves.sort(Comparator.comparing(Move::getScore));
-        Move result = new Move(0,0);// fake reference move
-        for(Move move: scoredMoves ){;
-            if(move.getScore() >= result.getScore()){
+
+        Move result = new Move(0, 0, 0);// fake reference move
+
+        for (Move move : scoredMoves) {
+            if (move.getScore() >= result.getScore()) {
                 result = move;
             }
         }
         //if all node are 0 it plays random
-        if (result.getScore() == 0){
+        if (result.getScore() <= -2) {
             Random r = new Random();
-            System.out.println("dont have a good move");
-            return scoredMoves.get(r.nextInt(scoredMoves.size()));
+            int i = r.nextInt(scoredMoves.size());
+            scoredMoves.sort(Comparator.comparing(Move::getScore));
+            System.out.println("random move = " + scoredMoves.get(0) + "ud af = " + scoredMoves.size() +  " moves" + "  score:  " + scoredMoves.get(0).getScore());
+            return scoredMoves.get(0);
         }
+
+        System.out.println("kvalificeret bud =  " + result + "  score  : " + result.getScore());
         return result;
     }
 
 
+    /**
+     * checks if the opponent can win in a local Field after your move
+     * @param state
+     * @param move
+     * @return
+     */
+    private Move checkForOpponentLocalWin(IGameState state, Move move) {
+        GameSimulator g = createSimulator(state);
+
+        if(g.updateGame(move)) {//checks if move is possible before updating board
+            List<IMove> rootMoves = g.getCurrentState().getField().getAvailableMoves();
+            List<Move> scoredMoves = new ArrayList<>();
+            //makes moves into scoreMoves
+            for (IMove moves : rootMoves) {
+                Move scoreMove = new Move(moves.getX(), moves.getY());
+                scoredMoves.add(scoreMove);
+            }
+            //runs through all opponent moves to see if they will win
+            for (int i = 0; scoredMoves.size() > i; i++){
+                Move  opponentMove = scoredMoves.get(i);
+                opponentMove = checkForLocalWin(g.getCurrentState(), opponentMove);//checks for opponent local win
+                if(opponentMove.getScore() > 0){
+                    move.setScore(move.getScore() +  opponentLocalWinChance);
+                    System.out.println("we missed a opponenet local win" + move + "  score  : " + move.getScore());
+                }
+            }
+        }
+        return move;
+    }
 
 
+    /**
+     * //todo check if we can block for opponent local-win with our move
+     * //todo if the move blocks it gains some points
+     */
+    private Move checkForLocalBlock(IGameState state, Move move) {
+            return move;
+    }
+
+
+
+    private Move checkForLocalWin(IGameState state, Move move){
+
+        GameSimulator g = createSimulator(state);
+        String currentPlayer = String.valueOf(g.currentPlayer);//gets the current player before we make a simulated move
+        if(g.updateGame(move)){//checks if move is possible before updating board
+            if(g.isWin(g.getCurrentState().getField().getBoard(), move, currentPlayer)){//see if move will win miniBoard
+                move.setScore(move.getScore() + localWinPoint);//adds point to the move if it wins local
+                System.out.println("we found a local win " + move + "  score  : " + move.getScore());
+            }
+        }
+        return move;
+    }
 
     private GameSimulator createSimulator(IGameState state) {
         GameSimulator simulator = new GameSimulator(new GameState());
@@ -204,6 +256,12 @@ public class BOTterThanYourself implements IBot {
         public Move(int x, int y) {
             this.x = x;
             this.y = y;
+        }
+
+        public Move(int x, int y, int score) {
+            this.x = x;
+            this.y = y;
+            this.score = score;
         }
 
         @Override
