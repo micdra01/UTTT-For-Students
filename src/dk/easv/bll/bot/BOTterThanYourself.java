@@ -80,7 +80,7 @@ public class BOTterThanYourself implements IBot {
 
     private int macroWin = 100000;
     private int localWinPoint = 50; //points when the move leads to an local win
-    private int localBlockPoint = 50; //points when the move leads to an local win
+    private int localBlockPoint = 25; //points when the move leads to an local win
     private int opponentLocalWinChance = -50; // points when move leads to enemy getting local win in next round
 
     private int opponenCanWinMacroInNextMove = - 1000;
@@ -253,10 +253,14 @@ public class BOTterThanYourself implements IBot {
                     gs3.updateGame(topCounterToCounters);
                 }
 
-                topCounterMove.setScore(topCounterMove.getScore() - getBestMove(topCountersToCounters).getScore());
+                if (!topCountersToCounters.isEmpty()) {
+                    topCounterMove.setScore(topCounterMove.getScore() - getBestMove(topCountersToCounters).getScore());
+                }
             }
 
-            topMove.setScore(topMove.getScore() - getBestMove(topCounterMoves).getScore());
+            if (!topCounterMoves.isEmpty()) {
+                topMove.setScore(topMove.getScore() - getBestMove(topCounterMoves).getScore());
+            }
         }
     }
 
@@ -335,7 +339,7 @@ public class BOTterThanYourself implements IBot {
             }
         });
 
-        List<Move> topMoves = new ArrayList<>();
+        /*List<Move> topMoves = new ArrayList<>();
         for (int i = 0; i < sortedMoves.size(); i++) {
             if (topMoves.isEmpty()) {
                 topMoves.add(sortedMoves.get(i));
@@ -360,9 +364,9 @@ public class BOTterThanYourself implements IBot {
             }
 
             return randomTopMoves;
-        }
+        }*/
 
-        return sortedMoves.subList(0, howMany);
+        return sortedMoves;
     }
 
 
