@@ -97,9 +97,8 @@ public class BOTterThanYourself implements IBot {
 
     @Override
     public IMove doMove(IGameState state) {
-
         //start of method gets the first available moves and creates a list of scored moves
-        GameSimulator gs = createSimulator(state);//gets created so we can get available moves
+        /*GameSimulator gs = createSimulator(state);//gets created so we can get available moves
         List<IMove> rootMoves = gs.getCurrentState().getField().getAvailableMoves();//all possible moves from current state
         List<Move> scoredMoves = new ArrayList<>();
 
@@ -107,11 +106,36 @@ public class BOTterThanYourself implements IBot {
         for (IMove moves : rootMoves) {
             Move scoreMove = new Move(moves.getX(), moves.getY());
             scoredMoves.add(scoreMove);
-        }
+        }*/
+
+        List<Move> scoredMoves = getAvailableScoredMoves(state);
+
+        List<Move> topMoves = getTopMoves(scoredMoves, 3);
+
+        lookAhead(topMoves, state);
+        /*for (Move topMove : topMoves) {
+            GameSimulator gs = createSimulator(state);
+            gs.updateGame(topMove);
+
+            List<Move> topCounterMoves = getTopCounterMoves(gs);
+
+            for (Move topCounterMove : topCounterMoves) {
+                GameSimulator gs2 = createSimulator(gs.getCurrentState());
+                gs2.updateGame(topCounterMove);
+
+                List<Move> topCountersToCounters = getTopCounterMoves(gs2);
+
+                topCounterMove.setScore(topCounterMove.getScore() + getBestMove(topCountersToCounters).getScore());
+            }
+
+            topMove.setScore(topMove.getScore() + getBestMove(topCounterMoves).getScore());
+        }*/
+
 
         //runs through all filters on each available move
 
-        for (Move move : scoredMoves) {
+
+        /*for (Move move : scoredMoves) {
 
             //todo all filter/ point methods methods should be placed here
             move = checkForLocalWin(state, move);  //checks for local win in this round
@@ -121,18 +145,18 @@ public class BOTterThanYourself implements IBot {
             move = checkForOpponentLocalWin(state, move);//checks for opponent local wins in next move
 
 
-        }
+        }*/
 
 
         //gets the highest score move and plays it
 
-        Move result = new Move(0, 0, 0);// fake reference move
-
-        for (Move move : scoredMoves) {
+       // Move result = new Move(0, 0, 0);// fake reference move
+        Move result = getBestMove(topMoves);
+        /*for (Move move : scoredMoves) {
             if (move.getScore() >= result.getScore()) {
                 result = move;
             }
-        }
+        }*/
         //if all node are 0 it plays random
         if (result.getScore() <= -2) {
             Random r = new Random();
@@ -144,6 +168,151 @@ public class BOTterThanYourself implements IBot {
 
         System.out.println("kvalificeret bud =  " + result + "  score  : " + result.getScore());
         return result;
+    }
+
+    private void lookAhead(List<Move> topMoves, IGameState state) {
+        for (Move topMove : topMoves) {
+            GameSimulator gs = createSimulator(state);
+            gs.updateGame(topMove);
+
+            addMoveScore(topMove, state);
+
+            List<Move> topCounterMoves = getTopCounterMoves(gs);
+
+            for (Move topCounterMove : topCounterMoves) {
+                GameSimulator gs2 = createSimulator(gs.getCurrentState());
+                gs2.updateGame(topCounterMove);
+
+                addMoveScore(topCounterMove, gs.getCurrentState());
+
+                List<Move> topCountersToCounters = getTopCounterMoves(gs2);
+
+                for (Move topCounterToCounters : topCountersToCounters) {
+                    GameSimulator gs3 = createSimulator(gs2.getCurrentState());
+                    gs3.updateGame(topCounterToCounters);
+
+                    addMoveScore(topCounterToCounters, gs2.getCurrentState());
+                }
+
+                topCounterMove.setScore(topCounterMove.getScore() - getBestMove(topCountersToCounters).getScore());
+            }
+
+            topMove.setScore(topMove.getScore() - getBestMove(topCounterMoves).getScore());
+        }
+    }
+
+    private List<Move> getAvailableScoredMoves(IGameState state) {
+        GameSimulator gs = createSimulator(state);//gets created so we can get available moves
+        List<IMove> rootMoves = gs.getCurrentState().getField().getAvailableMoves();//all possible moves from current state
+        List<Move> scoredMoves = new ArrayList<>();
+
+        //make each move into a score move that contains a score
+        for (IMove moves : rootMoves) {
+            Move scoreMove = new Move(moves.getX(), moves.getY());
+            scoredMoves.add(scoreMove);
+        }
+
+        return scoredMoves;
+    }
+
+    private List<Move> getTopCounterMoves(GameSimulator gs) {
+        List<IMove> rootMoves = gs.getCurrentState().getField().getAvailableMoves();
+        List<Move> scoredMoves = new ArrayList<>();
+
+        for (IMove rootMove : rootMoves) {
+            Move newMove = new Move(rootMove.getX(), rootMove.getY());
+            scoredMoves.add(newMove);
+        }
+
+        addMoveScores(scoredMoves, gs.getCurrentState());
+
+        return getTopMoves(scoredMoves, 3);
+    }
+
+    private Move getBestMove(List<Move> scoredMoves) {
+        List<Move> bestMoves = new ArrayList<>();
+
+        for (Move move : scoredMoves) {
+            if (bestMoves.isEmpty()) {
+                bestMoves.add(move);
+            }
+            else if (bestMoves.get(0).getScore() < move.getScore()) {
+                bestMoves.clear();
+                bestMoves.add(move);
+            }
+            else if (bestMoves.get(0).getScore() == move.getScore()) {
+                bestMoves.add(move);
+            }
+        }
+
+        if (bestMoves.size() > 1) {
+            Random random = new Random();
+            int randomIndex = random.nextInt(bestMoves.size());
+
+            return bestMoves.get(randomIndex);
+        }
+
+        return bestMoves.get(0);
+    }
+
+    private void addMoveScores(List<Move> scoredMoves, IGameState state) {
+        for (Move move : scoredMoves) {
+            addMoveScore(move, state);
+        }
+    }
+
+    private void addMoveScore(Move move, IGameState state) {
+        //todo all filter/ point methods methods should be placed here
+        move = checkForLocalWin(state, move);  //checks for local win in this round
+
+        move = checkForLocalBlock(state, move);  //checks for possible block moves
+
+        move = checkForOpponentLocalWin(state, move);//checks for opponent local wins in next move
+    }
+
+    private List<Move> getTopMoves(List<Move> scoredMoves, int howMany) {
+        List<Move> sortedMoves = new ArrayList<>();
+        sortedMoves.addAll(scoredMoves);
+        sortedMoves.sort((o1, o2) -> {
+            if (o1.getScore() < o2.getScore()) {
+                return 1;
+            }
+            else if (o1.getScore() == o2.getScore()) {
+                return 0;
+            }
+            else {
+                return -1;
+            }
+        });
+
+        List<Move> topMoves = new ArrayList<>();
+        for (int i = 0; i < sortedMoves.size(); i++) {
+            if (topMoves.isEmpty()) {
+                topMoves.add(sortedMoves.get(i));
+            }
+            else if (topMoves.get(i - 1).getScore() == sortedMoves.get(i).getScore()) {
+                topMoves.add(sortedMoves.get(i));
+            }
+            else {
+                break;
+            }
+        }
+
+        if (topMoves.size() > howMany) {
+            List<Move> randomTopMoves = new ArrayList<>();
+
+            for (int i = 0; i < howMany; i++) {
+                Random random = new Random();
+                int randomIndex = random.nextInt(topMoves.size());
+
+                randomTopMoves.add(topMoves.get(randomIndex));
+                topMoves.remove(topMoves.get(randomIndex));
+            }
+
+            return randomTopMoves;
+        }
+
+        return sortedMoves.subList(0, howMany);
     }
 
 
