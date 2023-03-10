@@ -5,8 +5,6 @@ import dk.easv.bll.field.IField;
 import dk.easv.bll.game.GameState;
 import dk.easv.bll.game.IGameState;
 import dk.easv.bll.move.IMove;
-import dk.easv.bll.move.Move;
-import org.w3c.dom.ls.LSOutput;
 
 import java.util.*;
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -80,25 +78,26 @@ import java.util.*;
  */
 
 
-public class BOTterThanYourself implements IBot {
+public class AA_BOTterThanYourself implements IBot {
     final int moveTimeMs = 1000;
-    private String BOT_NAME = getClass().getSimpleName();
+    private String BOT_NAME = "       BOT_NAKED       vs      not as good bot, that is gonna lose  and don't even gets mentioned in title                                                                                                                                                                                                                                                                                               ";
 
 
     //todo here the points for whatever situation the method is checking for, so we can optimise via fine tuning
 
-    private int macroWin = 10000000;
-    private int macroBlock = macroWin - 1000;
-    private int localWinPoint = 5000; //points when the move leads to an local win
-    private int localBlockPoint = 600; //points when the move leads to an local win
-    private int opponentLocalWinChance = -500; // points when move leads to enemy getting local win in next round
-    private int opponenCanWinMacroInNextMove = - 1000000;
+    private int macroWin = 100000000;
+    private int macroBlock = macroWin / 3;
+    private int localWinPoint = 5000000; //points when the move leads to an local win
+    private int localBlockPoint = 10000000; //points when the move leads to an local win
+    private int opponentLocalWinChance = -5000000; // points when move leads to enemy getting local win in next round
+    private int opponenCanWinMacroInNextMove = - 10000000;
 
     private int isOwend = 10;
     private int isTheMoveStillLocalWinnable = 5;
-    private int localUnwinnable = -10;
-    private int localWinnable = 10;
-    private int localPresence = 5;
+    private int localUnwinnable = 0;
+    private int localWinnable = 0;
+    private int localPresence = 100000;
+
 
 
     /**
@@ -108,79 +107,28 @@ public class BOTterThanYourself implements IBot {
     @Override
     public IMove doMove(IGameState state) {
 
-
-        /*for (Move topMove : topMoves) {
-            GameSimulator gs = createSimulator(state);
-            gs.updateGame(topMove);
-
-            List<Move> topCounterMoves = getTopCounterMoves(gs);
-
-            for (Move topCounterMove : topCounterMoves) {
-                GameSimulator gs2 = createSimulator(gs.getCurrentState());
-                gs2.updateGame(topCounterMove);
-
-                List<Move> topCountersToCounters = getTopCounterMoves(gs2);
-
-                topCounterMove.setScore(topCounterMove.getScore() + getBestMove(topCountersToCounters).getScore());
-            }
-
-            topMove.setScore(topMove.getScore() + getBestMove(topCounterMoves).getScore());
-        }*/
-
-
-        //runs through all filters on each available move
-
-
-        /*for (Move move : scoredMoves) {
-
-            //todo all filter/ point methods methods should be placed here
-            move = checkForLocalWin(state, move);  //checks for local win in this round
-
-            move = checkForLocalBlock(state, move);  //checks for possible block moves
-
-            move = checkForOpponentLocalWin(state, move);//checks for opponent local wins in next move
-
-
-        }*/
-
-
-        //gets the highest score move and plays it
-        // Move result = new Move(0, 0, 0);// fake reference move
         List<Move> moves = getAvailableScoredMoves(state);
-        Move result = lookAhead(moves, state, 5, 5);//getBestMove(scoredMoves);
-        /*for (Move move : scoredMoves) {
-            if (move.getScore() >= result.getScore()) {
-                result = move;
-            }
-        }*/
-        //if all node are 0 it plays random
-        /*if (result.getScore() <= -100000) {
-            List<Move> availableMoves = getAvailableScoredMoves(state);
-            Random r = new Random();
-            int i = r.nextInt(scoredMoves.size());
-            scoredMoves.sort(Comparator.comparing(Move::getScore));
-            return scoredMoves.get(0);
-        }
-
-
-
-
-            int i = r.nextInt(availableMoves.size());
-            availableMoves.sort(Comparator.comparing(Move::getScore));
-            return availableMoves.get(i);
-        }*/
+        Move result = lookAhead(moves, state, 40, 6);//getBestMove(scoredMoves);  40-6
         return result;
     }
 
     private Move rateMove(IGameState state, Move move) {
+
+        move = checkForOpponentMacroWin(state, move);
+        move = checkForMacroWin(state, move);
+        move = checkForMacroBlock(state, move);
         move = checkForLocalWin(state, move);
         move = checkForLocalBlock(state, move);
         move = checkForOpponentLocalWin(state, move);
-        move = checkForMacroWin(state, move);
+
+
+        /**
+         * move = checkForPresenceInMicro(state, move);
+        move = checkForOpponentLocalWin(state, move);
         move = checkForOpponentMacroWin(state, move);
-        move = checkForPossibleLocalWin(state, move);
-        move = checkForMacroBlock(state, move);
+         move = checkForPossibleLocalWin(state, move);
         move = checkForPresenceInMicro(state, move);
+         */
         return move;
     }
 
@@ -397,7 +345,9 @@ public class BOTterThanYourself implements IBot {
         if (expansions > 0 && System.currentTimeMillis() < end) {
             for (Move moves : availableMoves) {
                 GameSimulator gs = createSimulator(simulateMove(moves, state));
-
+                if(gs.getGameOver() == GameOverState.Win){
+                    moves.setScore(10000000);
+                }
                 List<Move> counterMoves = getTopCounterMoves(gs.getCurrentState(), top);
                 simulateGames(counterMoves, gs.getCurrentState(), expansions - 1, top, end);
             }
@@ -830,5 +780,7 @@ public class BOTterThanYourself implements IBot {
             }
         }
     }
+
+
 
 }
